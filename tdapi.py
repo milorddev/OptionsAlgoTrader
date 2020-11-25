@@ -3,6 +3,7 @@ import json
 import pathlib
 import config
 from datetime import datetime
+import requests
 
 
 currentDir = pathlib.Path().absolute()
@@ -65,10 +66,26 @@ def getWatchlists():
     watchlists = c.get_watchlists_for_single_account(config.account_id)
     return [(x['name'], x['watchlistId']) for x in watchlists.json()]
 
+def getScreenedList():
+    r = requests.get('https://financialmodelingprep.com/api/v3/stock-screener?volumeMoreThan=1000000&apikey=e16bc46ed4ae615380404c8efe59b4ca')
+    filtered = []
+    quotelist = []
+    for item in r.json():
+        if item['price'] >= 1 and item['price'] <= 10:
+            quotelist.append(item['symbol'])
+    quotes = c.get_quotes(','.join(quotelist)).json()
+    for key in quotes.keys():
+        item = quotes[key]
+        if item['lastPrice'] >= 1 and item['lastPrice'] <= 10:
+            percentChange = item['netChange']/item['lastPrice']
+            if percentChange >= 0.05:
+                item['percentChange'] = percentChange
+                filtered.append(item)
+    return filtered
+
 def display(x):
     try:
         print(json.dumps(x.json(), indent=4))
     except AttributeError:
         print(json.dumps(x, indent=4))
-
 
